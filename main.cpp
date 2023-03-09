@@ -18,6 +18,16 @@ point3d operator-(const point3d &p) {
     return point3d{-p[0], -p[1], -p[2]};
 }
 
+point3d operator+(const point3d &l, const point3d &r) {
+    return point3d{l[0] + r[0],
+                   l[1] + r[1],
+                   l[2] + r[2]};
+}
+
+point3d operator-(const point3d &p) {
+    return point3d{-p[0], -p[1], -p[2]};
+}
+
 point3d CalculateCenterPointOfTriangle(const point3d &a, const point3d &b, const point3d &c) {
     point3d center = {(a[0] + b[0] + c[0]) / 3,
                       (a[1] + b[1] + c[1]) / 3,
@@ -36,143 +46,6 @@ point3d crossProduct(const point3d &a, const point3d &b) {
     c[2] = a[0] * b[1] - a[1] * b[0];
     return c;
 }
-
-class KDTreeNode {
-public:
-    KDTreeNode *left;
-    KDTreeNode *right;
-    int dim;
-    real slice;
-    std::vector<int> triangles = {};
-    bool isLeaf = false;
-
-    KDTreeNode(const pointCloud3d &points, const std::vector<polygonIndexes> &indexesVector,
-               std::vector<int>& currTriangles, int depth, int prevSize = -1) {
-        // If there is not enough triangles or split is useless, make it a leaf
-        if (currTriangles.size() <= 3 || prevSize == currTriangles.size()) {
-            isLeaf = true;
-            triangles = currTriangles;
-            // std::cout << triangles.size() << ", " << depth << std::endl;
-            return;
-        }
-
-        dim = depth % 3;
-        std::vector<real> pnts = {};
-        pnts.reserve(currTriangles.size() * 3);
-        for (int i: currTriangles) {
-            pnts.push_back(points[indexesVector[i][0]][dim]);
-            pnts.push_back(points[indexesVector[i][1]][dim]);
-            pnts.push_back(points[indexesVector[i][2]][dim]);
-        }
-
-        std::sort(pnts.begin(), pnts.end());
-
-        if (pnts.size() % 2 == 0) {
-            slice = (pnts[pnts.size() / 2] + pnts[pnts.size() / 2 + 1]) / 2;
-        } else {
-            slice = pnts[pnts.size() / 2];
-        }
-
-        std::vector<int> leftTriangles = {};
-        std::vector<int> rightTriangles = {};
-
-        for (int i: currTriangles) {
-            bool left = false, right = false;
-            for (int j: indexesVector[i]) {
-                if (points[j][dim] < slice) {
-                    left = true;
-                } else {
-                    right = true;
-                }
-            }
-            if (left) leftTriangles.push_back(i);
-            if (right) rightTriangles.push_back(i);
-        }
-
-        left = new KDTreeNode(points, indexesVector, leftTriangles, depth + 1, currTriangles.size());
-        right = new KDTreeNode(points, indexesVector, rightTriangles, depth + 1, currTriangles.size());
-    }
-};
-
-class UnionSet {
-    std::vector<int> parent;
-    std::vector<int> rank;
-    int n_;
-public:
-    UnionSet(int n) {
-        n_ = n;
-        parent = {};
-        parent.reserve(n);
-        rank = {};
-        rank.reserve(n);
-        makeSet();
-    }
-
-    void makeSet() {
-        for (int i = 0; i < n_; i++) {
-            parent.push_back(i);
-            rank.push_back(0);
-        }
-    }
-
-    int find(int x) {
-        if (parent[x] != x) {
-            parent[x] = find(parent[x]);
-        }
-
-        return parent[x];
-    }
-
-    void join(int x, int y) {
-        int xset = find(x);
-        int yset = find(y);
-
-        if (xset == yset) return;
-
-        if (rank[xset] < rank[yset]) {
-            parent[xset] = yset;
-        } else if (rank[xset] > rank[yset]) {
-            parent[yset] = xset;
-        } else {
-            parent[yset] = xset;
-            rank[xset] = rank[xset] + 1;
-        }
-    }
-
-    std::vector<int> findAllChildren(int p) {
-        std::vector<int> children = {};
-
-        for (int i = 0; i < n_; i++) {
-            if (parent[i] == p) children.push_back(i);
-        }
-
-        return children;
-    }
-
-    std::vector<int> countDistinct() {
-        std::vector<int> uniqueParents = {};
-
-        for (int i = 1; i < n_; i++) {
-            if (std::find(uniqueParents.begin(), uniqueParents.end(), find(i)) == uniqueParents.end()) {
-                uniqueParents.push_back(parent[i]);
-            }
-        }
-        return uniqueParents;
-    }
-
-    std::vector<int> countDistinctForSet(std::vector<int> set) {
-        std::vector<int> uniqueParents = {};
-
-        for (int i = 1; i < n_; i++) {
-            if (std::find(set.begin(), set.end(), i) == set.end()) continue;
-
-            if (std::find(uniqueParents.begin(), uniqueParents.end(), find(i)) == uniqueParents.end()) {
-                uniqueParents.push_back(parent[i]);
-            }
-        }
-        return uniqueParents;
-    }
-};
 
 void getBoundingBox(const pointCloud3d &points, point3d &min, point3d &max) {
     std::vector<real> xpnts = {};
