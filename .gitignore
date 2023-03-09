@@ -9,6 +9,15 @@
 
 .vscode/*
 
+CMakeFiles/*
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+
+*.ply
+
+main
+
 # Precompiled Headers
 *.gch
 *.pch

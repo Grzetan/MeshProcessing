@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <array>
 #include <vector>
@@ -44,7 +45,7 @@ struct point3d{
         }
     }
 
-    point3d crossProduct(point3d& v){
+    point3d crossProduct(point3d v){
         return {
             y * v.z - z * v.y,
             x * v.z - z * v.x,
@@ -52,7 +53,7 @@ struct point3d{
         };
     }
 
-    double dotProduct(point3d& v){
+    double dotProduct(point3d v){
         return x * v.x + y * v.y + z * v.z;
     }
 

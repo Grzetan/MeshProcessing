@@ -1,4 +1,5 @@
 #pragma once
+#include "types.h"
 
 /* A header-only implementation of the .ply file format.
  * https://github.com/nmwsharp/happly
@@ -1448,13 +1449,13 @@ public:
    *
    * @return A vector of vertex positions.
    */
-  std::vector<std::array<double, 3>> getVertexPositions(const std::string& vertexElementName = "vertex") {
+  std::vector<point3d> getVertexPositions(const std::string& vertexElementName = "vertex") {
 
     std::vector<double> xPos = getElement(vertexElementName).getProperty<double>("x");
     std::vector<double> yPos = getElement(vertexElementName).getProperty<double>("y");
     std::vector<double> zPos = getElement(vertexElementName).getProperty<double>("z");
 
-    std::vector<std::array<double, 3>> result(xPos.size());
+    std::vector<point3d> result(xPos.size());
     for (size_t i = 0; i < result.size(); i++) {
       result[i][0] = xPos[i];
       result[i][1] = yPos[i];
@@ -1515,7 +1516,7 @@ public:
    *
    * @param vertexPositions A vector of vertex positions
    */
-  void addVertexPositions(std::vector<std::array<double, 3>>& vertexPositions) {
+  void addVertexPositions(std::vector<point3d>& vertexPositions) {
 
     std::string vertexName = "vertex";
     size_t N = vertexPositions.size();
