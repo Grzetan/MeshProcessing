@@ -66,7 +66,7 @@ struct point3d{
     }
 
     friend std::ostream& operator<<(std::ostream& os, const point3d& dt){
-        return os << dt.x << ", " << dt.y << ", " << dt.z << std::endl;
+        return os << "{ " << dt.x << ", " << dt.y << ", " << dt.z << " }";
     }
 };
 

@@ -692,14 +692,42 @@ auto normalizeVector(point3d vector_3d) {
 
 // Remove connectors knowing only position of the frame, corners are top left, top right, bottom right, bottom left
 void removeConnectorsWithCorners(const char* path, const char* outputPath, std::array<point3d, 4>& corners){
+    // Read input and group make shared points
+    happly::PLYData input(path);
+
+    std::vector<polygonIndexes> indexesVector = input.getFaceIndices();
+    pointCloud3d points = input.getVertexPositions();
+
+    std::vector<polygonIndexes> sharedIndexesVector = {};
+    pointCloud3d sharedPoints = {};
+
+    sharedMap uniqueVertices;
+
+    for(int i=0; i<points.size(); i++){
+        int a = roundReal(points[i][0]); 
+        int b = roundReal(points[i][1]); 
+        int c = roundReal(points[i][2]);
+
+        if(uniqueVertices[a][b][c] == 0){
+            uniqueVertices[a][b][c] = sharedPoints.size() + 1;
+            sharedPoints.push_back(points[i]);
+        }
+    }
+
     // We must very carefully adjust connector length because it can remove part of model (not sure how to do it yet).
-    const double artificalConnectorLen = 100;
+    const double artificalConnectorLen = 70;
 
     // Threshold that controls how close vertex should be to line segment to be classified as artificial connector
-    const double DIST_THRESH = 10;
+    const double DIST_THRESH = 5;
 
     // For how many positions on frame edge algorithm will be run
     const double N_EDGE_SEGMENTS = 20;
+
+    // How many points should be around artificial connector to be classified as real connector
+    const int MIN_VERTICES = 1500;
+
+    // Vector of detected connectors
+    std::vector<std::pair<point3d, point3d>> connectors = {};
 
     for(int i=0; i<4; i++){
         std::cout << i << ", " << (i+1)%4 << std::endl;
@@ -715,17 +743,35 @@ void removeConnectorsWithCorners(const char* path, const char* outputPath, std::
         artificialConnectorVec[1] *= artificalConnectorLen;
         artificialConnectorVec[2] *= artificalConnectorLen;
 
-        // Maximum number of faces around
+        // Maximum number of vertices around
         int max = 0;
 
         for(int j=0; j<N_EDGE_SEGMENTS; j++){
             point3d artificialConnectorStart = corners[i];
-            artificialConnectorStart[0] += mainLineVecNorm[0] * (j+stepSize);
-            artificialConnectorStart[1] += mainLineVecNorm[1] * (j+stepSize);
-            artificialConnectorStart[2] += mainLineVecNorm[2] * (j+stepSize);
+            artificialConnectorStart[0] += mainLineVecNorm[0] * (j*stepSize);
+            artificialConnectorStart[1] += mainLineVecNorm[1] * (j*stepSize);
+            artificialConnectorStart[2] += mainLineVecNorm[2] * (j*stepSize);
+            point3d artificialConnectorEnd = artificialConnectorStart + artificialConnectorVec;
 
-            // Calculate how many vertices are around line segment and pick the one with most vertices
+            int artificialConnectorPoints = 0;
+
+            // Calculate how many vertices are around line segment
+            for(int i=0; i<sharedPoints.size(); i++){
+                real distanceFromConnector = distanceBetweenPointAndSegment(artificialConnectorStart, artificialConnectorEnd, sharedPoints[i]);
+
+                if(distanceFromConnector < DIST_THRESH){
+                    artificialConnectorPoints++;
+                }
+            }
+
+            // If artificial connector has enough vertcies around, classify it as real connector
+            if(artificialConnectorPoints > MIN_VERTICES){
+                connectors.push_back({artificialConnectorStart, artificialConnectorEnd});
+            }
         }
     }
 
+    for(auto& connector : connectors){
+        std::cout << connector.first << connector.second << std::endl;
+    }
 }
