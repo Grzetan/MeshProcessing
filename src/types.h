@@ -11,11 +11,19 @@ typedef double real;
 struct point3d{
     real x, y, z;
 
-    point3d operator+(point3d& v){
+    point3d operator+(point3d v){
         return {x + v.x, y + v.y, z + v.z};
     }
 
-    point3d operator-(point3d& v){
+    point3d operator+=(point3d v){
+        return {x + v.x, y + v.y, z + v.z};
+    }
+
+    point3d operator-(point3d v){
+        return {x - v.x, y - v.y, z - v.z};
+    }
+
+    point3d operator-=(point3d v){
         return {x - v.x, y - v.y, z - v.z};
     }
 

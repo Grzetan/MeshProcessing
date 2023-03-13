@@ -607,7 +607,7 @@ real distanceBetweenPointAndSegment(point3d& bg, point3d& end, point3d& p){
 }
 
 // Remove connectors using markers glued to every connector
-void removeConnectorsWithMarkers(const char* path, const char* outputPath, std::vector<std::pair<point3d, point3d>>& markers){
+void removeConnectorsWithMarkers(const char* path, const char* outputPath, std::vector<std::pair<point3d, point3d>>& markers, real markerPos = 0.5){
     std::string path_(path);
     happly::PLYData input(path_);
 
@@ -619,9 +619,7 @@ void removeConnectorsWithMarkers(const char* path, const char* outputPath, std::
 
     sharedMap uniqueVertices;
 
-    real markerPos = 0.5;
-
-    const real THRESH = 10;
+    const real THRESH = 20;
 
     for(int i=0; i<points.size(); i++){
         int a = roundReal(points[i][0]); 
@@ -629,7 +627,7 @@ void removeConnectorsWithMarkers(const char* path, const char* outputPath, std::
         int c = roundReal(points[i][2]);
 
         if(uniqueVertices[a][b][c] == 0){
-            uniqueVertices[a][b][c] = sharedPoints.size() + 1;
+            uniqueVertices[a][b][c] = sharedPoints.size();
             sharedPoints.push_back(points[i]);
         }
     }
@@ -638,8 +636,7 @@ void removeConnectorsWithMarkers(const char* path, const char* outputPath, std::
             std::chrono::system_clock::now().time_since_epoch()
     );
 
-    pointCloud3d withoutConnectors = {};
-    std::map<int, int> map;
+    std::map<int, bool> mask; // Key as an index in sharedPoints array, value false = stay, value true = remove.
 
     for(auto& pair : markers){
         point3d vec = {pair.second[0] - pair.first[0], pair.second[1] - pair.first[1], pair.second[2] - pair.first[2]};
@@ -651,12 +648,21 @@ void removeConnectorsWithMarkers(const char* path, const char* outputPath, std::
         for(int i=0; i<sharedPoints.size(); i++){
             real distanceFromConnector = distanceBetweenPointAndSegment(bg, end, sharedPoints[i]);
 
-            if(distanceFromConnector > THRESH){
-                withoutConnectors.push_back(sharedPoints[i]);
-                map[i+1] = withoutConnectors.size() - 1;
-            }else{
-                map[i+1] = -1;
+            if(!mask[i]){
+                mask[i] = distanceFromConnector < THRESH;
             }
+        }
+    }
+
+    pointCloud3d withoutConnectors = {};
+    std::map<int, int> uniqueVerticesIndexesMap;
+
+    for(auto& elem : mask){
+        if(!elem.second){
+            withoutConnectors.push_back(sharedPoints[elem.first]);
+            uniqueVerticesIndexesMap[elem.first] = withoutConnectors.size() - 1;
+        }else{
+            uniqueVerticesIndexesMap[elem.first] = -1;
         }
     }
 
@@ -665,9 +671,9 @@ void removeConnectorsWithMarkers(const char* path, const char* outputPath, std::
         unsigned long b = uniqueVertices[roundReal(points[tri[1]][0])][roundReal(points[tri[1]][1])][roundReal(points[tri[1]][2])];
         unsigned long c = uniqueVertices[roundReal(points[tri[2]][0])][roundReal(points[tri[2]][1])][roundReal(points[tri[2]][2])];
 
-        if(map[a] == -1 || map[b] == -1 || map[c] == -1) continue;
+        if(uniqueVerticesIndexesMap[a] == -1 || uniqueVerticesIndexesMap[b] == -1 || uniqueVerticesIndexesMap[c] == -1) continue;
 
-        sharedIndexesVector.push_back({(unsigned long)map[a],(unsigned long)map[b],(unsigned long)map[c]});
+        sharedIndexesVector.push_back({(unsigned long)uniqueVerticesIndexesMap[a],(unsigned long)uniqueVerticesIndexesMap[b],(unsigned long)uniqueVerticesIndexesMap[c]});
     }
 
     happly::PLYData outputPLY;
@@ -715,10 +721,10 @@ void removeConnectorsWithCorners(const char* path, const char* outputPath, std::
     }
 
     // We must very carefully adjust connector length because it can remove part of model (not sure how to do it yet).
-    const double artificalConnectorLen = 70;
+    const double artificalConnectorLen = 80;
 
     // Threshold that controls how close vertex should be to line segment to be classified as artificial connector
-    const double DIST_THRESH = 5;
+    const double DIST_THRESH = 7;
 
     // For how many positions on frame edge algorithm will be run
     const double N_EDGE_SEGMENTS = 20;
@@ -774,4 +780,6 @@ void removeConnectorsWithCorners(const char* path, const char* outputPath, std::
     for(auto& connector : connectors){
         std::cout << connector.first << connector.second << std::endl;
     }
+
+    removeConnectorsWithMarkers(path, outputPath, connectors, 0);
 }

@@ -13,5 +13,7 @@ int main(){
     removeConnectorsWithCorners(path.c_str(), "testowanie.ply", corners);
 
     // std::vector<std::pair<point3d, point3d>> markers = { { {74.6, -114.42, -569.60}, {73.6, -113.42, -568.60} }};
+    // std::vector<std::pair<point3d, point3d>> markers = { { {14.02, -20.3, -486}, {24, -80, -454} }};
+
     // removeConnectorsWithMarkers(path.c_str(), "testowanie.ply", markers);
 }
